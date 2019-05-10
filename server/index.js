@@ -2,12 +2,15 @@ require("dotenv").load();
 
 var http = require("http");
 var path = require("path");
-var AccessToken = require('twilio').jwt.AccessToken;
+var AccessToken = require("twilio").jwt.AccessToken;
 var VideoGrant = AccessToken.VideoGrant;
+var SyncGrant = AccessToken.SyncGrant;
 
 var express = require("express");
-const client = require("twilio")(process.env.TWILIO_API_KEY, process.env.TWILIO_API_SECRET, { accountSid: process.env.TWILIO_ACCOUNT_SID });
-var randomName = require('./randomname');
+const client = require("twilio")(process.env.TWILIO_API_KEY, process.env.TWILIO_API_SECRET, {
+  accountSid: process.env.TWILIO_ACCOUNT_SID
+});
+var randomName = require("./randomname");
 
 // Max. period that a Participant is allowed to be in a Room (currently 14400 seconds or 4 hours)
 const MAX_ALLOWED_SESSION_DURATION = 14400;
@@ -51,14 +54,13 @@ app.get("/", function(request, response) {
 const init = async () => {
   try {
     const roomName = makeid(5);
-    
+
     const room = await client.video.rooms.create({
       recordParticipantsOnConnect: true,
       statusCallback: "http://example.org",
       type: "group",
       uniqueName: roomName,
-      videoCodecs: ['H264'],
-
+      videoCodecs: ["H264"]
     });
 
     app.get("/token", async function(request, response) {
@@ -69,13 +71,22 @@ const init = async () => {
         process.env.TWILIO_API_KEY,
         process.env.TWILIO_API_SECRET
       );
-    
+
       // Assign the generated identity to the token.
       token.identity = identity;
-    
+
       // Grant the access token Twilio Video capabilities.
-      var grant = new VideoGrant();
-      token.addGrant(grant);
+      token.addGrant(
+        new VideoGrant({
+          room: roomName
+        })
+      );
+
+      token.addGrant(
+        new SyncGrant({
+          serviceSid: process.env.TWILIO_SYNC_SERVICE_SID
+        })
+      );
 
       response.send({
         token: token.toJwt(),
@@ -97,11 +108,11 @@ const init = async () => {
 init();
 
 function makeid(length) {
-  var result           = '';
-  var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  var result = "";
+  var characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   var charactersLength = characters.length;
-  for ( var i = 0; i < length; i++ ) {
-     result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  for (var i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
   }
   return result;
 }
