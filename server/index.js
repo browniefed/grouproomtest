@@ -58,7 +58,7 @@ const init = async () => {
     const room = await client.video.rooms.create({
       recordParticipantsOnConnect: true,
       statusCallback: "http://example.org",
-      type: "group",
+      type: "group", // Comment out for p2p and it works
       uniqueName: roomName,
       videoCodecs: ["H264"]
     });
@@ -82,11 +82,11 @@ const init = async () => {
         })
       );
 
-      token.addGrant(
-        new SyncGrant({
-          serviceSid: process.env.TWILIO_SYNC_SERVICE_SID
-        })
-      );
+      // token.addGrant(
+      //   new SyncGrant({
+      //     serviceSid: process.env.TWILIO_SYNC_SERVICE_SID
+      //   })
+      // );
 
       response.send({
         token: token.toJwt(),
