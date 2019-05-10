@@ -1,20 +1,9 @@
-'use strict';
+require("dotenv").load();
 
-/**
- * Load Twilio configuration from .env config file - the following environment
- * variables should be set:
- * process.env.TWILIO_ACCOUNT_SID
- * process.env.TWILIO_API_KEY
- * process.env.TWILIO_API_SECRET
- */
-require('dotenv').load();
-
-var http = require('http');
-var path = require('path');
-var AccessToken = require('twilio').jwt.AccessToken;
-var VideoGrant = AccessToken.VideoGrant;
-var express = require('express');
-var randomName = require('./randomname');
+var http = require("http");
+var path = require("path");
+var express = require("express");
+const client = require("twilio")(process.env.TWILIO_API_KEY, process.env.TWILIO_API_SECRET, { accountSid: process.env.TWILIO_ACCOUNT_SID });
 
 // Max. period that a Participant is allowed to be in a Room (currently 14400 seconds or 4 hours)
 const MAX_ALLOWED_SESSION_DURATION = 14400;
@@ -24,29 +13,29 @@ var app = express();
 
 // Set up the paths for the examples.
 [
-  'bandwidthconstraints',
-  'codecpreferences',
-  'localvideofilter',
-  'localvideosnapshot',
-  'mediadevices'
+  "bandwidthconstraints",
+  "codecpreferences",
+  "localvideofilter",
+  "localvideosnapshot",
+  "mediadevices"
 ].forEach(function(example) {
   var examplePath = path.join(__dirname, `../examples/${example}/public`);
   app.use(`/${example}`, express.static(examplePath));
 });
 
 // Set up the path for the quickstart.
-var quickstartPath = path.join(__dirname, '../quickstart/public');
-app.use('/quickstart', express.static(quickstartPath));
+var quickstartPath = path.join(__dirname, "../quickstart/public");
+app.use("/quickstart", express.static(quickstartPath));
 
 // Set up the path for the examples page.
-var examplesPath = path.join(__dirname, '../examples');
-app.use('/examples', express.static(examplesPath));
+var examplesPath = path.join(__dirname, "../examples");
+app.use("/examples", express.static(examplesPath));
 
 /**
  * Default to the Quick Start application.
  */
-app.get('/', function(request, response) {
-  response.redirect('/quickstart');
+app.get("/", function(request, response) {
+  response.redirect("/quickstart");
 });
 
 /**
@@ -54,35 +43,45 @@ app.get('/', function(request, response) {
  * username for the client requesting a token, and takes a device ID as a query
  * parameter.
  */
-app.get('/token', function(request, response) {
-  var identity = randomName();
 
-  // Create an access token which we will sign and return to the client,
-  // containing the grant we just created.
-  var token = new AccessToken(
-    process.env.TWILIO_ACCOUNT_SID,
-    process.env.TWILIO_API_KEY,
-    process.env.TWILIO_API_SECRET,
-    { ttl: MAX_ALLOWED_SESSION_DURATION }
-  );
+const init = async () => {
+  try {
+    const roomName = makeid(5);
+    const room = await client.video.rooms.create({
+      recordParticipantsOnConnect: true,
+      statusCallback: "http://example.org",
+      type: "group",
+      uniqueName: roomName,
+      videoCodecs: ['H264'],
 
-  // Assign the generated identity to the token.
-  token.identity = identity;
+    });
 
-  // Grant the access token Twilio Video capabilities.
-  var grant = new VideoGrant();
-  token.addGrant(grant);
+    app.get("/token", async function(request, response) {
+      response.send({
+        token: room.sid,
+        name: roomName
+      });
+    });
 
-  // Serialize the token to a JWT string and include it in a JSON response.
-  response.send({
-    identity: identity,
-    token: token.toJwt()
-  });
-});
+    // Create http server and run it.
+    var server = http.createServer(app);
+    var port = process.env.PORT || 8000;
+    server.listen(port, function() {
+      console.log("Express server running on *:" + port);
+    });
+  } catch (e) {
+    console.log(e);
+  }
+};
 
-// Create http server and run it.
-var server = http.createServer(app);
-var port = process.env.PORT || 3000;
-server.listen(port, function() {
-  console.log('Express server running on *:' + port);
-});
+init();
+
+function makeid(length) {
+  var result           = '';
+  var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  var charactersLength = characters.length;
+  for ( var i = 0; i < length; i++ ) {
+     result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  }
+  return result;
+}
