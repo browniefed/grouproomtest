@@ -41,18 +41,10 @@ window.addEventListener("beforeunload", leaveRoomIfJoined);
 
 // Obtain a token from the server in order to connect to the Room.
 $.getJSON("/token", function(data) {
-  document.getElementById("room-controls").style.display = "block";
+  console.log(data);
 
   // Bind button to join Room.
   document.getElementById("button-join").onclick = function() {
-    roomName = document.getElementById("room-name").value;
-    if (!roomName) {
-      alert("Please enter a room name.");
-      return;
-    }
-
-    log("Joining room '" + roomName + "'...");
-
     if (previewTracks) {
       connectOptions.tracks = previewTracks;
     }

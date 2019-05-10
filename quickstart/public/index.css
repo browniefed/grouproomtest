@@ -102,10 +102,6 @@ div#controls div#log {
   border: 1px solid #686865;
 }
 
-div#controls div#room-controls {
-  display: none;
-}
-
 div#controls div#room-controls input {
   width: 100%;
   height: 2.5em;

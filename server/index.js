@@ -2,8 +2,12 @@ require("dotenv").load();
 
 var http = require("http");
 var path = require("path");
+var AccessToken = require('twilio').jwt.AccessToken;
+var VideoGrant = AccessToken.VideoGrant;
+
 var express = require("express");
 const client = require("twilio")(process.env.TWILIO_API_KEY, process.env.TWILIO_API_SECRET, { accountSid: process.env.TWILIO_ACCOUNT_SID });
+var randomName = require('./randomname');
 
 // Max. period that a Participant is allowed to be in a Room (currently 14400 seconds or 4 hours)
 const MAX_ALLOWED_SESSION_DURATION = 14400;
@@ -47,6 +51,7 @@ app.get("/", function(request, response) {
 const init = async () => {
   try {
     const roomName = makeid(5);
+    
     const room = await client.video.rooms.create({
       recordParticipantsOnConnect: true,
       statusCallback: "http://example.org",
@@ -57,8 +62,23 @@ const init = async () => {
     });
 
     app.get("/token", async function(request, response) {
+      var identity = randomName();
+
+      var token = new AccessToken(
+        process.env.TWILIO_ACCOUNT_SID,
+        process.env.TWILIO_API_KEY,
+        process.env.TWILIO_API_SECRET
+      );
+    
+      // Assign the generated identity to the token.
+      token.identity = identity;
+    
+      // Grant the access token Twilio Video capabilities.
+      var grant = new VideoGrant();
+      token.addGrant(grant);
+
       response.send({
-        token: room.sid,
+        token: token.toJwt(),
         name: roomName
       });
     });
